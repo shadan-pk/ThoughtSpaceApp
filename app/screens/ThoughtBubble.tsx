@@ -3,12 +3,12 @@ import { Text, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   runOnJS,
 } from 'react-native-reanimated';
 import {
   PanGestureHandler,
   PanGestureHandlerGestureEvent,
+  State,
 } from 'react-native-gesture-handler';
 
 type ThoughtBubbleProps = {
@@ -28,7 +28,6 @@ export default function ThoughtBubble({
 }: ThoughtBubbleProps) {
   const x = useSharedValue(initialX);
   const y = useSharedValue(initialY);
-
   const offsetX = useSharedValue(initialX);
   const offsetY = useSharedValue(initialY);
 
@@ -38,24 +37,32 @@ export default function ThoughtBubble({
     top: y.value,
   }));
 
+  const onGestureEvent = (event: PanGestureHandlerGestureEvent) => {
+    'worklet';
+    x.value = offsetX.value + event.nativeEvent.translationX;
+    y.value = offsetY.value + event.nativeEvent.translationY;
+  };
 
-const onGestureEvent = (event: PanGestureHandlerGestureEvent) => {
-  'worklet';
-  x.value = offsetX.value + event.nativeEvent.translationX;
-  y.value = offsetY.value + event.nativeEvent.translationY;
-};
-
-const onGestureEnd = () => {
-  'worklet';
-  offsetX.value = x.value;
-  offsetY.value = y.value;
-
-  runOnJS(onDragEnd)(id, x.value, y.value);
-};
-
+  const onHandlerStateChange = (event: PanGestureHandlerGestureEvent) => {
+    'worklet';
+    if (event.nativeEvent.state === State.END || event.nativeEvent.state === State.CANCELLED) {
+      offsetX.value = x.value;
+      offsetY.value = y.value;
+      
+      runOnJS(onDragEnd)(id, x.value, y.value);
+    }
+  };
 
   return (
-    <PanGestureHandler onGestureEvent={onGestureEvent} onEnded={onGestureEnd}>
+    <PanGestureHandler 
+      onGestureEvent={onGestureEvent} 
+      onHandlerStateChange={onHandlerStateChange}
+      minPointers={1}
+      maxPointers={1}
+      shouldCancelWhenOutside={false}
+      activeOffsetX={[-5, 5]}
+      activeOffsetY={[-5, 5]}
+    >
       <Animated.View style={[styles.bubble, animatedStyle]}>
         <Text style={styles.bubbleText}>{text}</Text>
       </Animated.View>
