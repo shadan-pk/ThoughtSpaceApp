@@ -13,9 +13,13 @@ import TopBar from './TopBar';
 import InputBox from './InputBox';
 import ThoughtBubble from './ThoughtBubble';
 import { useSpaces } from '../hooks/useSpaces';
+import OptionsMenuModal from './OptionMenuModel'; 
 
 export default function Home() {
   const [input, setInput] = useState('');
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [showSpaceMenu, setShowSpaceMenu] = useState(false); // Add this missing state
+  
   const {
     currentSpace,
     isLoading,
@@ -25,6 +29,7 @@ export default function Home() {
     clearAllThoughts,
     saveCurrentSpace,
     createNewSpace,
+    loadSpace, // Add this if missing from useSpaces hook
   } = useSpaces();
 
   const handleSend = async () => {
@@ -45,7 +50,7 @@ export default function Home() {
       Alert.alert('Success', 'Space saved successfully!');
     } catch (error) {
       console.error('Failed to save space:', error);
-      throw error; // Re-throw to be handled by TopBar
+      throw error;
     }
   };
 
@@ -84,15 +89,33 @@ export default function Home() {
   };
 
   const handleOptionsPress = () => {
-    // Future options menu implementation
-    Alert.alert('Options', 'Options menu coming soon!');
+    // Force a clean state and delay to prevent gesture conflicts
+    setShowOptionsMenu(false);
+    requestAnimationFrame(() => {
+      setShowOptionsMenu(true);
+    });
   };
 
-  const handleDragEnd = async (id: number, x: number, y: number) => {
+  // Close options menu properly
+  const handleCloseOptionsMenu = () => {
+    setShowOptionsMenu(false);
+  };
+
+  const handleOpenSettings = () => {
+    Alert.alert('Settings', 'Settings menu coming soon!');
+  };
+
+  const handleOpenSpace = () => {
+    setShowSpaceMenu(true);
+  };
+
+  const handleSelectSpace = async (spaceId: string) => {
     try {
-      await updateThoughtPosition(id, x, y);
+      await loadSpace(spaceId);
+      setShowSpaceMenu(false); // Close space menu after selection
     } catch (error) {
-      console.error('Failed to update thought position:', error);
+      console.error('Failed to load space:', error);
+      Alert.alert('Error', 'Failed to load space. Please try again.');
     }
   };
 
@@ -116,6 +139,7 @@ export default function Home() {
           onPress: async () => {
             try {
               await clearAllThoughts();
+              setShowOptionsMenu(false); // Close menu after clearing
               Alert.alert('Success', 'All thoughts have been cleared.');
             } catch (error) {
               console.error('Failed to clear thoughts:', error);
@@ -125,6 +149,14 @@ export default function Home() {
         },
       ]
     );
+  };
+
+  const handleDragEnd = async (id: number, x: number, y: number) => {
+    try {
+      await updateThoughtPosition(id, x, y);
+    } catch (error) {
+      console.error('Failed to update thought position:', error);
+    }
   };
 
   if (isLoading) {
@@ -154,6 +186,23 @@ export default function Home() {
         onOptionsPress={handleOptionsPress}
       />
       
+      <OptionsMenuModal
+        visible={showOptionsMenu}
+        onClose={handleCloseOptionsMenu} // Use proper handler
+        onClearAllThoughts={handleClear}
+        onOpenSettings={handleOpenSettings}
+        onOpenSpace={handleOpenSpace} // Use proper handler
+      />
+
+      {/* Uncomment and fix when SpaceMenuModal is ready */}
+      {/* 
+      <SpaceMenuModal
+        visible={showSpaceMenu}
+        onClose={() => setShowSpaceMenu(false)}
+        onSelectSpace={handleSelectSpace}
+      />
+      */}
+
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
